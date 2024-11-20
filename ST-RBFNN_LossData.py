@@ -3,27 +3,55 @@ import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist
 from sklearn.metrics import mean_squared_error
 
-# Radial Basis Function (RBF) Kernel
+# RBF Kernel Function
 def rbf_kernel(x, centers, gamma):
     distance = cdist(x, centers, 'euclidean')
     return np.exp(-gamma * (distance ** 2))
 
-# Spatio-Temporal Radial Basis Function Neural Network for missing data imputation
+# Spatio-Temporal Radial Basis Function Neural Network
 class ST_RBFNN:
-    def __init__(self, num_centers, gamma=1.0):
-        self.num_centers = num_centers
-        self.gamma = gamma
-        self.centers = None
-        self.weights = None
-
+    def __init__(self, num_centers, gamma=1.0, activation='relu'):
+        self.num_centers = num_centers  # Number of RBF centers
+        self.gamma = gamma              # Kernel width parameter
+        self.centers = None             # RBF centers
+        self.weights = None             # Weights of the output layer
+        self.activation_func = self._get_activation(activation)  # Nonlinear activation
+    
+    def _get_activation(self, activation):
+        """Select activation function."""
+        if activation == 'relu':
+            return lambda x: np.maximum(0, x)
+        elif activation == 'sigmoid':
+            return lambda x: 1 / (1 + np.exp(-x))
+        elif activation == 'tanh':
+            return lambda x: np.tanh(x)
+        else:
+            raise ValueError(f"Unsupported activation: {activation}")
+    
     def fit(self, X, y):
+        # Initialize RBF centers (e.g., random selection)
         random_idx = np.random.choice(len(X), self.num_centers, replace=False)
         self.centers = X[random_idx]
+        
+        # Compute RBF output
         RBF_output = rbf_kernel(X, self.centers, self.gamma)
+        
+        # Apply nonlinear activation
+        RBF_output = self.activation_func(RBF_output)
+        
+        # Compute weights using the pseudoinverse
         self.weights = np.linalg.pinv(RBF_output) @ y
+        
 
+    
     def predict(self, X):
+        # Compute RBF output for test data
         RBF_output = rbf_kernel(X, self.centers, self.gamma)
+        
+        # Apply nonlinear activation
+        RBF_output = self.activation_func(RBF_output)
+        
+        # Compute final output
         return RBF_output @ self.weights
 
 # Generate sample spatio-temporal data with missing values
