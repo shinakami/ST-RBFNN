@@ -3,7 +3,7 @@ from scipy.spatial.distance import cdist
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
-
+from sklearn.cluster import KMeans
 # RBF Kernel Function
 def rbf_kernel(x, centers, gamma):
     distance = cdist(x, centers, 'euclidean')
@@ -30,9 +30,15 @@ class ST_RBFNN:
             raise ValueError(f"Unsupported activation: {activation}")
     
     def fit(self, X, y):
+
+        #K-means to check centers
+        kmeans = KMeans(n_clusters=self.num_centers, random_state=42)
+        kmeans.fit(X)  
+        self.centers = kmeans.cluster_centers_
+        
         # Initialize RBF centers (e.g., random selection)
-        random_idx = np.random.choice(len(X), self.num_centers, replace=False)
-        self.centers = X[random_idx]
+        #random_idx = np.random.choice(len(X), self.num_centers, replace=False)
+        #self.centers = X[random_idx]
         
         # Compute RBF output
         RBF_output = rbf_kernel(X, self.centers, self.gamma)
@@ -85,7 +91,7 @@ X_train, pressure_train = X[:split_idx], pressure[:split_idx]
 X_test, pressure_test = X[split_idx:], pressure[split_idx:]
 
 # Initialize and train ST-RBFNN model
-st_rbfnn = ST_RBFNN(num_centers=100, gamma=1.5)
+st_rbfnn = ST_RBFNN(num_centers=100, gamma=1.75)
 st_rbfnn.fit(X_train, pressure_train)
 
 # Predict on the test set
