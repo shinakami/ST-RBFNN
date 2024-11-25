@@ -5,6 +5,11 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 
 # Radial Basis Function (RBF) kernel
 def rbf_kernel(x, centers, gamma):
@@ -19,7 +24,7 @@ def rbf_kernel(x, centers, gamma):
 
 # HDST-RBFNN class (with fixes)
 class HDST_RBFNN(nn.Module):
-    def __init__(self, num_centers, gamma=1.0, dnn_hidden_layers=[100, 50], activation='relu', dropout_prob=0.4, device='cuda'):
+    def __init__(self, num_centers, gamma=1.0, dnn_hidden_layers=[100, 50], activation='relu', dropout_prob=0.3, device='cuda'):
         super(HDST_RBFNN, self).__init__()
         self.num_centers = num_centers
         self.gamma = gamma
@@ -68,7 +73,9 @@ class HDST_RBFNN(nn.Module):
         self.centers = torch.tensor(kmeans.cluster_centers_, dtype=torch.float32, device=self.device)
 
         # Optimizer
-        optimizer = optim.Adam(self.dnn.parameters(), lr=lr, weight_decay=1e-5)
+        #optimizer = optim.Adam(self.dnn.parameters(), lr=lr, weight_decay=1e-5)
+        optimizer = optim.RMSprop(self.dnn.parameters(), lr=lr, weight_decay=1e-5)
+
 
         criterion = nn.MSELoss()
 
@@ -125,9 +132,10 @@ def generate_data(n_samples=2000):
     pressure = np.sin(t) + 0.5 * np.cos(2 * t) + np.random.normal(scale=0.1, size=n_samples)  # Pressure as target
     
     # Combine x, y, t, into one array for input features
+    scaler = StandardScaler()
     X = np.vstack((x, y, t)).T  # Shape: (n_samples, 3)
-    
-    return X, pressure
+    X_standardized = scaler.fit_transform(X)
+    return X_standardized, pressure
 
 
 
@@ -150,11 +158,11 @@ X_train, X_test = X_tensor[:train_size], X_tensor[train_size:]
 y_train, y_test = y_tensor[:train_size], y_tensor[train_size:]
 
 # Initialize model
-model = HDST_RBFNN(num_centers=700, gamma=2.77, device=device, activation='relu')
+model = HDST_RBFNN(num_centers=200, gamma=1.25, device=device, activation='relu')
 
 # Train the model
 print("Training the model...")
-model.fit(X_train, y_train, epochs=500000, lr=0.00001)
+model.fit(X_train, y_train, epochs=100000, lr=0.00001)
 
 # Predict and evaluate
 print("Evaluating the model...")
@@ -170,7 +178,7 @@ mse = mean_squared_error(y_test_np, y_pred_test_np)
 
 # Plot the results
 plt.figure(figsize=(10, 6))
-
+plt.get_current_fig_manager().full_screen_toggle()
 # Plot test set predictions
 plt.plot(np.arange(len(y)), y, label="True Pressure")
 plt.plot(np.arange(len(y_train), len(y_train) + len(y_test_np)), y_pred_test_np.flatten(), label="Predicted Pressure", linestyle="--")
@@ -186,7 +194,8 @@ plt.title("HDST-RBFNN Pressure Prediction (Pytorch cuda)")
 plt.xlabel("Sample Index")
 plt.ylabel("Pressure")
 plt.legend()
-plt.savefig("HDST-RBFNN Pressure Prediction (Pytorch cuda)")
+
+plt.savefig('HDST-RBFNN Pressure Prediction (Pytorch cuda)', dpi=100)
 # Show plot
 plt.show()
 
