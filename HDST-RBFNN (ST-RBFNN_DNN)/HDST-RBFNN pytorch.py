@@ -15,7 +15,23 @@ torch.backends.cudnn.benchmark = False
 def rbf_kernel(x, centers, gamma):
     """
     Compute the RBF kernel output between x and centers.
+
+    Parameters:
+        x (torch.Tensor): Input data of shape (n_samples, n_features).
+        centers (torch.Tensor): RBF kernel centers of shape (n_centers, n_features).
+        gamma (float): Kernel parameter controlling the width of the Gaussian.
+
+    Returns:
+        torch.Tensor: RBF kernel output of shape (n_samples, n_centers).
     """
+    # Initialize StandardScaler and fit it on x and centers together
+    scaler = StandardScaler()
+    combined = torch.cat((x, centers), dim=0).cpu().numpy()  # Move to CPU for scaling
+    scaler.fit(combined)
+    
+    # Apply the same scaling transformation
+    x = torch.tensor(scaler.transform(x.cpu().numpy()), device=x.device)
+    centers = torch.tensor(scaler.transform(centers.cpu().numpy()), device=x.device)
     # Ensure both inputs are on the same device
     centers = centers.to(x.device)
     # Compute squared Euclidean distance
@@ -132,10 +148,10 @@ def generate_data(n_samples=2000):
     pressure = np.sin(t) + 0.5 * np.cos(2 * t) + np.random.normal(scale=0.1, size=n_samples)  # Pressure as target
     
     # Combine x, y, t, into one array for input features
-    scaler = StandardScaler()
+
     X = np.vstack((x, y, t)).T  # Shape: (n_samples, 3)
-    X_standardized = scaler.fit_transform(X)
-    return X_standardized, pressure
+
+    return X, pressure
 
 
 
