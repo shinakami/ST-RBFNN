@@ -7,6 +7,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
+
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
@@ -118,7 +119,6 @@ class HDST_RBFNN(nn.Module):
             # Backpropagation
             loss.backward()
             optimizer.step()
-
             if (epoch + 1) % 10 == 0:
                 print(f"Epoch {epoch + 1}/{epochs}, Loss: {loss.item()}")
             
@@ -159,6 +159,7 @@ def generate_data(n_samples=2000):
 
 # Main workflow
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"mode: {device}")
 
 # Generate data
 X, y = generate_data(n_samples=2000)
@@ -173,12 +174,14 @@ train_size = int(split_ratio * len(X))
 X_train, X_test = X_tensor[:train_size], X_tensor[train_size:]
 y_train, y_test = y_tensor[:train_size], y_tensor[train_size:]
 
+
+
 # Initialize model
-model = HDST_RBFNN(num_centers=200, gamma=1.25, device=device, activation='relu')
+model = HDST_RBFNN(num_centers=train_size, gamma=1.25, dnn_hidden_layers=[len(X), len(X), len(X)-train_size], device=device, activation='relu')
 
 # Train the model
 print("Training the model...")
-model.fit(X_train, y_train, epochs=100000, lr=0.00001)
+model.fit(X_train, y_train, epochs=50000, lr=0.0001)
 
 # Predict and evaluate
 print("Evaluating the model...")
