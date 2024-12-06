@@ -2,12 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist
 from sklearn.metrics import mean_squared_error
+from sklearn.cluster import KMeans
 
 # RBF Kernel Function
 def rbf_kernel(x, centers, gamma):
     distance = cdist(x, centers, 'euclidean')
     return np.exp(-gamma * (distance ** 2))
-
 # Spatio-Temporal Radial Basis Function Neural Network
 class ST_RBFNN:
     def __init__(self, num_centers, gamma=1.0, activation='relu'):
@@ -16,7 +16,6 @@ class ST_RBFNN:
         self.centers = None             # RBF centers
         self.weights = None             # Weights of the output layer
         self.activation_func = self._get_activation(activation)  # Nonlinear activation
-    
     def _get_activation(self, activation):
         """Select activation function."""
         if activation == 'relu':
@@ -27,23 +26,21 @@ class ST_RBFNN:
             return lambda x: np.tanh(x)
         else:
             raise ValueError(f"Unsupported activation: {activation}")
-    
     def fit(self, X, y):
-        # Initialize RBF centers (e.g., random selection)
-        random_idx = np.random.choice(len(X), self.num_centers, replace=False)
-        self.centers = X[random_idx]
-        
-        # Compute RBF output
+        # Step 1: Use K-Means to find RBF centers
+        kmeans = KMeans(n_clusters=self.num_centers, random_state=42)
+        kmeans.fit(X)
+        self.centers = kmeans.cluster_centers_
+
+        # Step 2: Compute the RBF output for all input data
         RBF_output = rbf_kernel(X, self.centers, self.gamma)
-        
-        # Apply nonlinear activation
+
+        # Step 3: Apply the activation function to the RBF output
         RBF_output = self.activation_func(RBF_output)
-        
-        # Compute weights using the pseudoinverse
+
+        # Step 4: Compute the weights using the pseudoinverse of RBF output
         self.weights = np.linalg.pinv(RBF_output) @ y
         
-
-    
     def predict(self, X):
         # Compute RBF output for test data
         RBF_output = rbf_kernel(X, self.centers, self.gamma)
@@ -66,7 +63,7 @@ def generate_data_with_missing_values(n_samples=2000, missing_ratio=0.2):
     mask = np.random.rand(n_samples) > missing_ratio
     pressure_missing = np.copy(pressure)
     pressure_missing[~mask] = np.nan  # Set missing values to NaN
-    X = np.vstack((x, y, t)).T
+    X = np.vstack((x, y, t)).T  # Shape: (n_samples, 3)
     return X, pressure_missing, mask, pressure  # Return full data for comparison
 
 # Initialize data
