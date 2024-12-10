@@ -177,11 +177,11 @@ y_train, y_test = y_tensor[:train_size], y_tensor[train_size:]
 
 
 # Initialize model
-model = HDST_RBFNN(num_centers=train_size, gamma=1.25, dnn_hidden_layers=[len(X), len(X), len(X)-train_size], device=device, activation='relu')
+model = HDST_RBFNN(num_centers=train_size, gamma=0.05, dnn_hidden_layers=[len(X), len(X), len(X)-train_size], device=device, activation='relu')
 
 # Train the model
 print("Training the model...")
-model.fit(X_train, y_train, epochs=50000, lr=0.0001)
+model.fit(X_train, y_train, epochs=3000, lr=0.001)
 
 # Predict and evaluate
 print("Evaluating the model...")
@@ -194,7 +194,7 @@ y_pred_test_np = y_pred_test.cpu().detach().numpy()
 
 # Calculate overall Mean Squared Error (MSE)
 mse = mean_squared_error(y_test_np, y_pred_test_np)
-
+rmse = np.sqrt(mse)
 # Plot the results
 plt.figure(figsize=(10, 6))
 plt.get_current_fig_manager().full_screen_toggle()
